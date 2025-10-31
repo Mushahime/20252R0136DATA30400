@@ -19,7 +19,7 @@ We are given:
 
 Since the existing labels are incomplete and noisy, we refine them into silver labels using the class-related keywords and the hierarchical structure of the taxonomy. These improved labels are then used to train a hierarchical multi-label classification model that can predict the relevant product categories for each review while respecting parent–child dependencies.
 
-The project evaluates different learning strategies such as self-training, pseudo-labeling, and graph-based methods, and compares their impact on performance. Finally, examples of both correct and incorrect predictions are analyzed to better understand the model’s behavior (see report).
+The project evaluates different learning strategies such as self-training, pseudo-labeling, and graph-based methods, and compares their impact on performance. Finally, examples of both correct and incorrect predictions are analyzed to better understand the model’s behavior (see Report/).
 
 ## Repository Structure
 
@@ -70,8 +70,8 @@ It is provided for reference only and **should not be copied or reused** for oth
 Task reference paper:  
 https://aclanthology.org/2021.naacl-main.335.pdf
 
-Taxonomy:
-![alt text](image-1.png)
+Taxonomy details:
+![alt text](Image/image-1.png)
 
 ## GitHUB
 https://github.com/Mushahime/20252R0136DATA30400.git
