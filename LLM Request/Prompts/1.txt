@@ -1,0 +1,79 @@
+Here's a clean .gitignore tailored to your ML project structure (based on the screenshot)
+It avoids tracking datasets, outputs, checkpoints, temporary files, Jupyter cache… while keeping code + config.
+
+Recommended ML Project .gitignore
+# -------------------------
+# PYTHON
+# -------------------------
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.pdb
+*.egg-info/
+*.egg
+*.log
+*.tmp
+
+# Virtual environments
+venv/
+env/
+.venv/
+
+# Jupyter
+.ipynb_checkpoints/
+*.ipynb_backup
+*.ipynb_checkpoints/
+
+# VSCode
+.vscode/
+
+# -------------------------
+# MACHINE LEARNING DATA
+# -------------------------
+# Training & test data
+Amazon_products/test/
+Amazon_products/train/
+
+# Model outputs (LLM Request)
+LLM Request/Output/
+LLM Request/Prompts/
+
+# Model artifacts
+Model/
+*.pth
+*.pt
+*.h5
+*.ckpt
+*.model
+*.onnx
+*.joblib
+
+# -------------------------
+# RESULTS, REPORTS, CACHE
+# -------------------------
+# Intermediate results or experiments
+results/
+runs/
+output/
+predictions/
+checkpoints/
+wandb/
+mlruns/
+tensorboard/
+*.jsonl
+
+# Cache dirs
+.cache/
+__cache__/
+*.cache
+*.pickle
+*.pkl
+*.npz
+*.npy
+
+# -------------------------
+# OS / MISC
+# -------------------------
+.DS_Store
+Thumbs.db

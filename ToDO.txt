@@ -1,0 +1,10 @@
+AWS Ressources -> 90%
+
+Build a classifier
+
+bash
+
+tasks : Silver label generation (taxonomy + keywords)
+Transformer-based classifier training
+Optional self-training and hierarchy refinement
+Final Kaggle prediction file generation
