@@ -1,1 +1,0 @@
-Do a gitignore specific for a project of ML (see photo of arborescence)
