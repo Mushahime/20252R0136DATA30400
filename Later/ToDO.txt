@@ -1,0 +1,72 @@
+AWS Ressources -> 90%
+
+Build a classifier
+
+bash
+
+tasks : Silver label generation (taxonomy + keywords)
+Transformer-based classifier training
+Optional self-training and hierarchy refinement
+Final Kaggle prediction file generation
+
+TaxoClass original:
+[Entailment → Core class mining → Dual encoder + BCE loss → Self-training]
+Toi:
+[Embeddings → Silver labels → MLP / GNN sur labels faibles]
+
+Unlabeled
+
+1️⃣ Load raw + labeled + silver data
+2️⃣ Preprocessing / encoding
+3️⃣ Build model (student)
+4️⃣ Train student + teacher (EMA)
+5️⃣ Evaluate on val set (example F1)
+6️⃣ Generate predictions on test set
+7️⃣ Format submission
+
+# BERT fine-tuning
+
+""" Our TaxoClass framework consists of four major
+ steps: (1) document-class similarity calculation, (2)
+ document core class mining, (3) core class guided
+ classifier training, and (4) multi-label self-training.
+ Fig. 2 shows our framework overview and below
+ sections discuss each step in more details.
+
+Step Purpose	Requires LLM?	Paper Section
+(A) Enrich class information	Generate keywords for each class	✅ Yes (few prompts)	Sec. 3.1 improvement
+(B) Get more accurate labels for hard cases	Filter candidate labels	✅ Yes but few calls	Sec. 3.4 (Self-training help)
+(C) Optional iterative correction	Improve hard samples gradually	✅ Yes (but limited)	Sec. 3.3–3.4
+
+1. Silver label generation: Explain the methodology used to generate silver labels De
+scribe your design choices, heuristics, and the use of large language models (LLMs), if
+ any. Provide reasoning for how your approach maintains label reliability.
+ 
+ 2. Training process: Describe how you trained your model(s), including learning objec
+tives (e.g., loss functions) and advanced strategies applied (e.g., self-training, regulariza
+tion, data augmentation). Provide reasoning for how your approach improves learning
+ effectiveness.
+
+ 3. Model and Prediction Method: Clearly describe how you make predictions — which
+ models were used (e.g., pretrained encoders, LLMs, classifiers) and how they were com
+bined or integrated to produce final predictions, if applicable.
+
+ 4. Experimental results: Summarize your experimental results in a table that includes
+ both your best-performing result and other meaningful attempts or ablation variants you
+ tried. You are encouraged to use techniques covered in class, but you are not limited
+ to them. We expect your results table to include a comparison of various techniques
+ introduced in class, including at least self-training and GNN-based approaches. For
+ reference, see Table 2 in the reference paper
+
+💡 Self-training (si tu le fais)
+💡 Prediction finale
+
+propagation of information over graph for labels and for features p26
+GNN / GCN
+"""
+
+A. Filtrage des silver labels	Nettoyer les pseudo-labels incertains	~600	C’est ici que le LLM t’apporte le plus de gain direct
+B. Vérification des prédictions finales (test)	Ajuster les labels incohérents après ton modèle	~300	Améliore ton F1 Kaggle sans toucher au training
+C. Analyse d’erreurs	Comprendre les confusions du modèle	~100	Pour améliorer ta prochaine version
+
+llm plus tard
