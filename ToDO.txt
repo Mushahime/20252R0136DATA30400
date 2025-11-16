@@ -1,0 +1,6 @@
+Expliquer amélioration faites par les methodes mises en place
+LLM sur Pseudo labels but explain that it is just long
+Tester fine tuned
+AWS
+Rapport
+Readme, gitignore, tests, venv et requirements

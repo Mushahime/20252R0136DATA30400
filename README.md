@@ -1,9 +1,3 @@
-<style>
-body, h1, h2, h3, p, table, pre, code {
-    text-align: justify;
-}
-</style>
-
 # Hierarchical Multi-Label Text Classification
 2025/10/31 - 2025/12/20
 
