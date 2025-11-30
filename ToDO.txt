@@ -1,6 +1,4 @@
-Expliquer amélioration faites par les methodes mises en place
-LLM sur Pseudo labels but explain that it is just long
-Tester fine tuned
-AWS
-Rapport
-Readme, gitignore, tests, venv et requirements
+Rapport, Readme, gitignore, tests, venv et requirements, AWS, refacto
+PAS fait ou Sert à rien : finetuning (batch trop petit), LLM, TF idf, post processing, softlabels, fair
+Faire des schémas (pour montrer amélioration avec regularization etc)
+Reprendre tout !! 
