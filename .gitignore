@@ -30,3 +30,7 @@ __cache__/
 *.pkl
 *.npz
 *.npy
+
+# Models & useless things
+try/
+Later/

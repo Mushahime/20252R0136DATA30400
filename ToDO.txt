@@ -1,4 +1,75 @@
-Rapport, Readme, gitignore, tests, venv et requirements, AWS, refacto
-PAS fait ou Sert à rien : finetuning (batch trop petit), LLM, TF idf, post processing, softlabels, fair
-Faire des schémas (pour montrer amélioration avec regularization etc)
-Reprendre tout !! 
+Rapport, AWS, refacto
+PAS fait ou Sert à rien : finetuning (batch trop petit), LLM, TF idf, post processing, softlabels, fair voir try, warmpup, node2Vec, softpseudolabels, 
+seuil adaptatif, combine self training GNN, threshold, combine embeddings, gnn + self training, consistency loss
+Long to test
+Il y a toujours plein de choses à faire mais j'avais plus le temps (+ 100 submissions quand même)
+
+BERT = comprendre les mots dans leur contexte
+SBERT = représenter la phrase entière dans un vecteur sémantique
+
+TF-IDF :
+
+c’est juste du comptage de mots
+pas de contexte
+pas de synonymes
+pas de compréhension
+pas de structure
+pas de paraphrases
+
+Ils comprennent le sens, donc ils placent naturellement les catégories proches “près les unes des autres” dans l’espace vectoriel.
+
+✔ SBERT ne comprend pas la hiérarchie
+→ Il comprend seulement le sens.
+✔ MAIS il positionne naturellement les concepts proches les uns des autres
+→ ce que TF-IDF ne peut absolument pas faire.
+✔ La hiérarchie explicite (parent/child)
+→ c’est toi qui la rajoutes au-dessus des embeddings.
+
+Test en anglais
+Déjà finetuner
+Récent
+
+Tu lui donnes 531 catégories et :
+il ne les sépare pas bien
+il crée des clusters trop larges
+il est mauvais sur long-tail
+il surpondère des relations NLI trop fortes
+SBERT-RoBERTa a été optimisé pour STS (phrase-phrase),
+pas pour :
+classification hiérarchique
+milliers de comparaisons review → labels
+embeddings propres entre centaines de classes
+
+Preuve anti amazon : https://huggingface.co/sentence-transformers/all-MiniLM-L6-v2
+https://www.sbert.net/docs/sentence_transformer/pretrained_models.html
+https://huggingface.co/sentence-transformers/all-distilroberta-v1
+https://huggingface.co/optimum/all-MiniLM-L6-v2#:~:text=Table_title:%20Training%20data%20Table_content:%20header:%20%7C%20Dataset,%7C%20Number%20of%20training%20tuples:%20100%2C231%20%7C
+
+attention use dropout
+
+# Option 1: Silver MPNet → Train MiniLM (TON CHOIX)
+Silver quality: ★★★★★ (meilleur modèle)
+Training: ★★★★☆ (features ok)
+→ Bon compromis qualité/vitesse
+
+# Option 2: Silver MiniLM → Train MPNet (INVERSE)
+Silver quality: ★★★☆☆ (labels moins précis)
+Training: ★★★★★ (features riches)
+→ Garbage in, garbage out! Labels médiocres limitent tout
+
+# Option 3: Silver MPNet → Train MPNet (MÊME)
+Silver quality: ★★★★★
+Training: ★★★★★
+→ Mais circular reasoning! Le MLP ne sert à rien
+```
+
+"Nos résultats révèlent un problème fondamental: la qualité des silver 
+labels. Le GCN atteint 0.72 en validation mais performe moins bien sur 
+Kaggle, tandis que l'InnerProduct Classifier atteint seulement 0.62 en 
+validation mais 0.53 sur Kaggle. Cette inversion s'explique par le fait 
+que les modèles plus expressifs (GCN, MLP) mémorisent les erreurs des 
+silver labels, alors que l'InnerProduct Classifier, contraint par les 
+embeddings sémantiques fixes, généralise mieux aux vrais labels."
+
+
+self training + consistency loss 

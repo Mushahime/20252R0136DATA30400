@@ -1,0 +1,166 @@
+# Contrastive finetuning
+print("finetuning...")
+
+# Projection head to adapt and refine embedding space
+class ProjectionHead(nn.Module):
+    def __init__(self, dim=768):
+        super().__init__()
+        self.linear = nn.Linear(dim, dim)
+
+    def forward(self, x):
+        return self.linear(x)
+
+proj_head = ProjectionHead(dim=X_train.shape[1]).to(device)
+
+# Contrastive dataset construction (GPT helps me on this one)
+class ContrastiveDataset(Dataset):
+    def __init__(self, train_ids, silver_dataset, X_train, label_emb, neg_ratio=4):
+        self.samples = []
+        all_labels = list(range(label_emb.shape[0]))
+
+        for pid in train_ids:
+            if pid not in silver_dataset:
+                continue
+
+            pos_labels = silver_dataset[pid]
+
+            # Add positive pairs
+            for lbl in pos_labels:
+                self.samples.append((pid, lbl, 1))
+
+            # Add negative sampled pairs
+            neg_candidates = [l for l in all_labels if l not in pos_labels]
+            negs = random.sample(neg_candidates, neg_ratio * len(pos_labels))
+
+            for neg_lbl in negs:
+                self.samples.append((pid, neg_lbl, -1))
+
+        self.X_train = X_train
+        self.label_emb = label_emb
+
+    def __len__(self):
+        return len(self.samples)
+
+    def __getitem__(self, idx):
+        pid, lbl, target = self.samples[idx]
+
+        text_vec = self.X_train[pid2idx[pid]]
+        label_vec = self.label_emb[lbl]
+
+        return (
+            torch.tensor(text_vec, dtype=torch.float),
+            torch.tensor(label_vec, dtype=torch.float),
+            torch.tensor(target, dtype=torch.float)
+        )
+
+dataset = ContrastiveDataset(
+    train_ids=train_ids,
+    silver_dataset=silver_dataset,
+    X_train=X_train.detach().cpu().numpy(),
+    label_emb=label_emb.detach().cpu().numpy(),
+    neg_ratio=4
+)
+loader = DataLoader(dataset, batch_size=64, shuffle=True)
+optimizer = torch.optim.AdamW(proj_head.parameters(), lr=3e-4)
+
+# We use cosine distance instead of BCE or 
+# softmax because the model outputs embeddings, not probabilities, and the
+# task is metric learning (similarity-based), not classification.
+loss_fn = nn.CosineEmbeddingLoss(margin=0.5)
+
+# Training loop (update proj head)
+EPOCHS = 5
+
+for epoch in range(EPOCHS):
+    total_loss = 0
+
+    for x, y, target in loader:
+        x, y, target = x.to(device), y.to(device), target.to(device)
+
+        # Apply projection head to both embeddings
+        x_proj = proj_head(x)
+        y_proj = proj_head(y)
+
+        # Normalize outputs
+        x_proj = F.normalize(x_proj, dim=1)
+        y_proj = F.normalize(y_proj, dim=1)
+
+        # Compute contrastive loss
+        loss = loss_fn(x_proj, y_proj, target)
+
+        optimizer.zero_grad()
+        loss.backward()
+        optimizer.step()
+
+        total_loss += loss.item()
+
+    print(f"Epoch {epoch+1}/{EPOCHS} - Loss: {total_loss:.4f}")
+
+print("\nFinetuning completed.\n")
+
+
+# Apply projection head to all embeddings
+X_train_norm = F.normalize(proj_head(X_train.to(device)), dim=1)
+X_test_norm = F.normalize(proj_head(X_test.to(device)), dim=1)
+label_emb_norm = F.normalize(proj_head(label_emb.to(device)), dim=1)
+
+# Recompute PL
+# Pairwise similarity matrix
+all_similarities = torch.matmul(X_train_norm, label_emb_norm.T).cpu()
+
+# Store similarity scores for the original silver labels
+silver_with_scores = {}
+
+for idx, pid in enumerate(train_ids):
+    if pid not in silver_labels:
+        continue
+
+    labels = silver_labels[pid]
+    sims = all_similarities[idx]
+
+    label_scores = [float(sims[label]) for label in labels]
+
+    silver_with_scores[pid] = {
+        "labels": labels,
+        "scores": label_scores,
+        "max_score": max(label_scores),
+    }
+
+# Compute quartiles
+max_scores = [info["max_score"] for info in silver_with_scores.values()]
+
+Q1 = np.quantile(max_scores, 0.25)
+Q2 = np.quantile(max_scores, 0.50)
+Q3 = np.quantile(max_scores, 0.75)
+
+print(f"Q1(25%): {Q1:.4f}")
+print(f"Q2(50%): {Q2:.4f}")
+print(f"Q3(75%): {Q3:.4f}")
+
+# Threshold based on top quartile
+threshold = Q3
+print(f"\nUsing threshold: {threshold:.4f}")
+
+# Split into pseudo-labeled and unlabeled subsets
+pseudo_pids = [pid for pid, info in silver_with_scores.items() if info["max_score"] >= threshold]
+
+unlabeled_pids = [pid for pid, info in silver_with_scores.items() if info["max_score"] < threshold]
+
+print(f"\nPseudo-labeled count : {len(pseudo_pids)}")
+print(f"Unlabeled count : {len(unlabeled_pids)}")
+
+# Build final datasets
+silver_dataset_finetuned = {
+    pid: silver_with_scores[pid]["labels"]
+    for pid in pseudo_pids
+}
+
+unlabeled_dataset_finetuned = unlabeled_pids
+
+X_train_norm = X_train_norm.detach()
+X_test_norm = X_test_norm.detach()
+label_emb_norm = label_emb_norm.detach()
+
+X_train_norm = torch.stack([X_train_norm[pid2idx[pid]] for pid in train_ids])
+# Rebuild pid2idx correctly
+pid2idx = {pid: i for i, pid in enumerate(train_ids)}
