@@ -31,9 +31,7 @@ project_release/
 ├──├──class_hierarchy.txt -> Parent–child hierarchical taxonomy  
 
 ### Model Artifacts
-├── Embeddings/ -> Stored sentence / label embeddings    
-├── Silver/ -> Silver-labeled datasets generated from keywords  
-├── Gold/ -> contain a csv with the 5 gold labels given by Kaggle   
+├── Gold/ -> contain a csv with the 5 gold labels given by Kaggle and others docs   
 ├── Submission/ -> Final submission outputs (predictions, results)   
 ├── Models/ -> Saved Models     
 
@@ -45,23 +43,31 @@ project_release/
 ├──├──├──├──report.pdf -> Final report for the project  
 
 ### Model Notebooks
-├── classicGNN.ipynb -> Graph-based GNN baseline  
-├── classicMLP.ipynb -> MLP baseline model  
-├── innerproduct.ipynb -> Inner-product classifier        
-├── selfGNN.ipynb -> Self-training + GNN version  
-├── selftraining.ipynb -> Self-training pipeline (no GNN)   
+├── 1_Linear.ipynb -> MLP baseline model (~MLP only 1 linear layer)  
+├── 2_Innerproduct.ipynb -> Inner-product classifier        
+├── 3_GNN.ipynb -> Graph-based GNN baseline   
+├── 4_Selftraining.ipynb -> Self-training on innerproduct baseline  
+├── 5_MLP_GNN.ipynb -> Graph-based GNN baseline + MLP projection before enter in the GNN   
+├── 6_MIX_ensemble.ipynb -> Ensemble baseline (GNN + Innerproduct baseline) 
 
-### Silver Label Generation Notebook
-├── silver_generation_miniML.ipynb -> MiniLM embeddings  
+### Silver Label Generation Notebook + some Model Artifacts
+├── SilverGeneration/  
+├── ├── Silver/ -> Silver-labeled datasets generated from keywords (with the use of hier embeddings and without)  
+├── ├── SilverCombo/ -> Silver-labeled datasets combo (ensemble)
+├── ├── Embeddings/  -> Stored sentence / label embeddings    
+├── silver_generation_mini.ipynb -> MiniLM embeddings  
 ├── silver_generation_mpnet.ipynb -> MPNet embeddings    
-├── silver_generation_roberta.ipynb -> RoBERTa embeddings  
+├── silver_generation_miniBM25.ipynb -> MiniLM embeddings + BM25  
+├── silver_generation_mpnetBM25.ipynb -> MPNet embeddings + BM25   
+├── silver_generation_multiMini.ipynb -> MiniLM embeddings (do not just take the most similar one + expand with hierarchy) -> silver labels with more than 3 labels  
+├── silver_generation_multiMpnet.ipynb -> MPNet embeddings (do not just take the most similar one + expand with hierarchy) -> silver labels with more than 3 labels  
+├── silver_generation_combo.ipynb -> File that allows us to combine multiple json together (ensemble json)   
 
 ### Core Files
 ├── .gitattributes  
 ├── .gitignore  
 ├── README.md  
 ├── requirements.txt  
-└── utils.py (useless)
 
 ## Requirements
 
@@ -99,11 +105,14 @@ Windows
 The silver labels are produced by running the silver-labeling notebooks.
 Each notebook uses a different sentence-embedding model to match product reviews with their most relevant categories based on the class keywords and hierarchy.
 
-You can generate the silver labels by simply running the notebooks:
+You can generate the silver labels by simply running the 6 notebooks:
 ```
 silver_generation_miniLM.ipynb
 silver_generation_mpnet.ipynb
-silver_generation_roberta.ipynb
+silver_generation_miniBM25.ipynb
+silver_generation_mpnetBM25.ipynb
+silver_generation_multiMini.ipynb
+silver_generation_multiMpnet.ipynb
 ```
 
 Model differences :
@@ -115,21 +124,44 @@ Model differences :
     - Much faster
     - Slightly worse than MPNet
     - Good trade-off when you need speed
-- RoBERTa
-    - Not relevant for this task in our experiments
-    - Lower performance compared to the two above
 
-Output :  
+N.B : I tried also RoBERTa but it's not relevant for this task in our experiments => Lower performance compared to the two above  
+
+3 types of Generation :
+- Classic (only use the chosen model and 1 silver label list follow the heuristic "1 core class and 1/2 ancestors" => max 3 labels / min 2 labels) -> e.g : silver_generation_miniLM.ipynb
+- Combination Classic with BM25 -> e.g : silver_generation_miniBM25.ipynb
+- MultiClassic (only use the chosen model and 1 silver label list can have 2 core classes and at least 1 + some ancestors) -> e.g : silver_generation_multiMini.ipynb
+
+N.B : The most performants is the combination of all the classic model + BM25, the combination of the 2 mpnet ones.
+
+Create Better Silver labels :  
+You can significantly improve the quality of the silver labels by combining multiple JSON files produced by different models.
+Using majority voting across models leads to more stable and more accurate labels.  
+
+See the notebook silver_generation_combo for the implementation details of the combined-label procedure.
+
+To use the system quickly:
+Choose one of the predefined dictionaries (paths, paths2, paths3, …) or create your own.
+
+Set it in the loader:
+- Choose one of the predefined dictionaries (paths, paths2, paths3, …) or create your own
+- Set it in the loader: ```silvers = load_silver_files(paths3)```
+- Select an output name: ```OUT_PATH = "SilverCombo/silver_train_new_clean_all.json"```
+- Run the notebook to generate the merged silver labels
+
+N.B : The most performant is the combination of classic Mpnet + Mpnet with BM25.
+
+General Output :  
 Each notebook produces Silver-labeled samples, saved in:
 ```
-Silver/
+SilverGeneration/Silver/ or SilverCombo/
 ```
 
 Embeddings for the training corpus and all label representations
 (both hierarchical and non-hierarchical versions), saved in:
 
 ```
-Embeddings/
+SilverGeneration/Embeddings/
 ```
 
 These silver labels and embeddings are then used to train the hierarchical classifier.
@@ -138,27 +170,27 @@ Note1:
 - for embeddings of the corpus : X_train_test_{model_name}.pt
 - for embeddings of the labels (with hierarchy) : labels_{model_name}.pt
 - for embeddings of the corpus (without hierarchy): labels_base_{model_name}.pt
-- for silver labels (without hierarchy): silver_train_new_{model_name}_nohier.json
-- for silver labels (with hierarchy): silver_train_new_{model_name}.json  
+- for silver labels (without hierarchy): silver_train_{model_name}_nohier.json
+- for silver labels (with hierarchy): silver_train_{model_name}.json  
 
-Note2: If you don’t want to lose time, all the .pt and .json files are already provided, and I confirm that I did not cheat in the creation of these documents.  
+Note2: If you do not want to lose time, all the .pt and .json files are already provided, and I confirm that I did not cheat in the creation of these documents.  
 
 ### Use Model for Submission
 To generate the official submission files, we provide **6 training notebooks**.  
 Each notebook trains the hierarchical classifier using a different configuration
 (MLP, InnerProduct, self training, GNN, etc.).
 
-List of submission notebooks :
-- `MLP_GNN.ipynb` -> GNN + MLP linear proj
-- `classicGNN.ipynb` -> GNN
-- `classicMLP.ipynb` -> MLP (2 linear layers)
-- `innerproduct.ipynb` -> InnerProduct Classifier
-- `classicMIX.ipynb` -> Mix of GNN and innerprodtuct (ensemble)
-- `classicselftraining.ipynb` -> MLP + self training
+List of submission notebooks :  
+├── 1_Linear.ipynb -> MLP baseline model (~MLP only 1 linear layer)    
+├── 2_Innerproduct.ipynb -> Inner-product classifier        
+├── 3_GNN.ipynb -> Graph-based GNN baseline   
+├── 4_Selftraining.ipynb -> Self-training on innerproduct baseline  
+├── 5_MLP_GNN.ipynb -> Graph-based GNN baseline + MLP projection before enter in the GNN    
+├── 6_MIX_ensemble.ipynb -> Ensemble baseline (GNN + Innerproduct baseline) 
 
 Each notebook follows the same pipeline:
-1. Load embeddings  
-2. Load label embeddings  
+1. Load corpus embeddings  
+2. Load label embeddings (with hierarchy or not)  
 3. Load silver labels  
 4. Train the model (classifier, training with loss, etc.)  
 5. Generate a submission file inside the `Submission/` folder
