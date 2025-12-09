@@ -1,0 +1,1 @@
+Folder for LLm API call => in this project no use of any API call but for sure I used LLM to help me to code.

@@ -2,7 +2,10 @@
 Rapport, AWS, refacto
 PAS fait ou Sert à rien : finetuning (batch trop petit), LLM, TF idf, post processing, softlabels, fair voir try, warmpup, node2Vec, softpseudolabels, 
 seuil adaptatif, combine self training GNN, threshold, combine embeddings, gnn + self training, consistency loss, circular reasoning (parler amélioration), 
-hard labels vs softlabels, recheck labels -> bruit inutile
+hard labels vs softlabels, recheck labels -> bruit inutile, LLM API, differente simarité (cos sim etc), sentence-t5-xxl, recheck, agreement KFold
+x = x + 0.02 * torch.randn_like(x) E5-large-v2
+
+
 Long to test
 Il y a toujours plein de choses à faire mais j'avais plus le temps (+ 100 submissions quand même)
 
@@ -122,7 +125,7 @@ le self training c surement bien mais là j'y arrivais pas mais prendre les silv
 
 mix silver good
 
-0.46 sans rien 0.49 avec gnn
+0.52 sans rien 0.56 avec linear
 
 Les silver labels ne sont pas utilisés dans une boucle d’auto-apprentissage.
 Ils servent à :
@@ -155,26 +158,6 @@ Propagated embeddings (hierarchical_embeddings)
 
 faire commentaire trainable ou pas pour gnn
 
-import json
-import csv
-
-input_path = "Silver/silver_test.json"
-output_path = "output.csv"
-
-# Load JSON
-with open(input_path, "r", encoding="utf-8") as f:
-    data = json.load(f)
-
-# Write CSV
-with open(output_path, "w", encoding="utf-8", newline="") as f:
-    writer = csv.writer(f)
-    writer.writerow(["id", "label"])
-
-    for pid, info in data.items():
-        labels = info["labels"]
-        label_str = ",".join(str(l) for l in labels)
-        writer.writerow([pid, label_str])
-
 modèle trop rigide -> entrainement pas fou
 
 ✔ stabilité (moins de variance batch-to-batch)
@@ -182,6 +165,135 @@ modèle trop rigide -> entrainement pas fou
 ✔ meilleure calibration (logits moins extrêmes)
 ✔ meilleure robustesse aux silver labels bruités
 ✔ convergence plus progressive → moins de sur-adaptation précoce
+
+transformer légèrement les embeddings MPNet pour qu’ils collent mieux aux embeddings de labels
+apprendre une séparation adaptée à ton dataset Amazon
+faire de la calibration
+generaliser sur les noisy silver labels
+Mais ton backbone (MPNet) fait déjà l’essentiel du travail.
+Ta job principale = améliorer les labels.
+Le classifieur = un amplificateur de la qualité des labels.
+
+evaluate threshold
+
+# TON WORKFLOW:
+# 1. Train sur silver labels (bruitées)
+# 2. Prédis sur test avec ce modèle bruité
+# 3. Ajoute ces prédictions bruitées au train
+# 4. Re-train sur encore plus de bruit
+# -> LE MODÈLE RENFORCE SES PROPRES ERREURS !
+
+❌ 1. Tu n’as aucun vrai label
+
+Tu entraînes sur du silver → bruit → fine-tuning = cataclysme.
+
+❌ 2. Fine-tuning un modèle transformer nécessite :
+
+labels non bruités
+batchs de texte
+learning rate tiny (~1e-5)
+compute énorme
+Impossible ici.
+
+❌ 3. Fine-tuning détruirait la géométrie semantique
+
+Et tout ton pipeline est basé sur la structure cosine de MPNet.
+
+Si tu touches MPNet :
+→ toutes tes distances changent
+→ tes labels embed changent
+→ ton pipeline s’effondre.
+
+Ils ont déjà une géométrie :
+
+hiérarchique
+isotropique
+cosiné stable
+clusterisée par thèmes
+Si tu défreeze :
+
+→ tu détruis cette géométrie
+→ tes catégories et tes reviews ne seront plus alignées
+→ l’espace devient non-linéaire et chaotique
+→ ton cosine-similarity basé pipeline ne fonctionne plus
+→ ton classifieur se fait exploser
+
+Threshold seul	Simple	Pas stable, dépend de la distribution
+Quantile seul	Ajout contrôlé	Peut inclure des mauvais labels
+Quantile + Threshold	⭐ Meilleure qualité + régularité	Paramétrage initial
+
+parler mieux LLM
+context enhancer
+
+zero shot
+
+reprendre intro paper
+weakly
+supervised hierarchical multi-label text classification
+
+"We observe that when asked to assign
+ multiple classes to a document, humans will first
+ pinpoint most essential “core classes” and then
+ check whether their ancestor classes in the taxon
+omy should also be tagged."
+
+Tes silver labels viennent d’un modèle S-BERT + propagation hiérarchique.
+Ils sont ultra-précis, ultra-stables, et très rigides → ils représentent déjà 90% du signal final.
+Tous tes modèles (MLP, InnerProduct, GCN, EMA…) apprennent juste :
+👉 « Reproduire les labels qu’on m’a donnés ».
+
+Donc :
+plus le modèle est simple, mieux il generalise → car il colle aux silver labels, sans overfit ;
+plus tu rajoutes de regularization, GCN, EMA, consistency, plus tu brouilles ce signal → perte de F1 ;
+ton vrai score Kaggle dépend quasi uniquement de la qualité des silver labels, pas du classifier.
+
+👉 TON PIPELINE EST 80% SILVER, 20% MODEL.
+
+
+1️⃣ Dataless classification améliorée
+encoder classes → embeddings
+encoder documents → embeddings
+prédire par similarité cosinus + GNN pour raffiner
+C’est exactement une variante moderne du dataless classification.
+
+2️⃣ Pseudo-labeling / Self-training
+Tu ajoutes ensuite des pseudo-labels pour améliorer les représentations.
+label_hierarchy_loss
+macro f1 ou sample f1
+
+
+✔ elle améliore la robustesse
+✔ elle évite le sur-alignement des embeddings
+✔ elle rend le modèle moins dépendant du bruit
+✔ elle améliore la hiérarchie chain consistency
+✔ elle évite que certains labels s'effondrent
+✔ elle donne de meilleurs logits pour le ranking (P@1/P@3)
+
+ajuster scale
+
 ===================================================================================
 
---> A faire : self training (+ consistency loss)
+Pourquoi hier_norm est mieux même pour top-1 ?
+Parce que le top-1 ne dépend pas uniquement de la proximité brute, mais de la structure des catégories :
+Quand tu utilises hier_norm :
+un enfant reste proche de son parent
+deux enfants du même parent deviennent proches
+les catégories orphelines deviennent cohérentes
+Donc le top-1 devient :
+✔ plus stable
+✔ plus robuste
+✔ plus cohérent
+✔ plus “classifiable” pour ton modèle ensuite
+✔ meilleur pour générer des silver labels hiérarchiques
+
+comparer v1 et v2
+skip conncection => - de Parent-Child Cosine Similarities 
+
+
+Donc OUI, skip connections peuvent améliorer ton boost MAIS:
+
+Ce n'est pas un effet direct - skip ne "crée" pas la structure parent-child
+C'est un effet de préservation - skip empêche que tout devienne identique
+Sans hierarchical loss, skip ne suffit pas - tu auras quand même boost ≈ 0
+
+pas grand différence label embeddings hier
