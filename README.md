@@ -77,13 +77,13 @@ git clone https://github.com/Mushahime/20252R0136DATA30400
 cd 20252R0136DATA30400
 ```
 
-### 1. Install Python 3.9+  
+### 1. Install Python 3.9.12 (you can work with 3.9 + but the requirements.txt will not be accurate, so you will need to install dependencies manually)  
 Download from: https://www.python.org/downloads/
 
 Check: ```python --version```
 
 ### 2. Create a virtual environment
-```python -m venv venv```
+```py -3.9 -m venv venv```
 
 ### 3. Activate it
 
@@ -93,13 +93,14 @@ macOS / Linux
 Windows  
 ```venv\Scripts\activate```
 
-### 4. Install dependencies  
+### 4. Install dependencies (upgrade pip before)
+```python -m pip install --upgrade pip```
 ```pip install -r requirements.txt```
 
 ## How to launch the best solution
 All required components (embeddings, silver labels, etc.) have already been generated using other functions to save time.
 
-To produce the best solution, you only need to run Main.ipynb. This will generate a file named submission_linear.csv, which you can then submit to obtain the best results.
+To produce the best solution, you only need to run Main.ipynb with the created venv. This will generate a file named submission_linear.csv, which you can then submit to obtain the best results.
 
 ## Explanation of the code
 ### Generate Silver Labels
