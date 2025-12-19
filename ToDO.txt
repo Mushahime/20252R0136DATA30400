@@ -1,3 +1,0 @@
-readme
-how to laucn the best solution
-commenter + tests pour tableau
