@@ -41,7 +41,7 @@ project_release/
 ├──├──final_project.pdf -> Assignment instructions   
 ├──├──main_paper.pdf -> Related research paper and main reference   
 ├──├──├──Report/  
-├──├──├──├──report.pdf -> Final report for the project  
+├──├──├──├──report.pdf -> Final report of the project  
 
 ### Model Notebooks
 ├── Main.ipynb -> Classifiers (GNN, linear, innerproduct) with BCE loss + hierarchical loss  
@@ -94,13 +94,13 @@ Windows
 ```venv\Scripts\activate```
 
 ### 4. Install dependencies (upgrade pip before)
-```python -m pip install --upgrade pip```
+```python -m pip install --upgrade pip```  
 ```pip install -r requirements.txt```
 
-## How to launch the best solution
+## How to launch the best solution (~ 3 minutes of waiting time)
 All required components (embeddings, silver labels, etc.) have already been generated using other functions to save time.
 
-To produce the best solution, you only need to run Main.ipynb with the created venv. This will generate a file named submission_linear.csv, which you can then submit to obtain the best results.
+To produce the best solution, you only need to run Main.ipynb with the created venv (e.g : Ipykernel package in VScode). This will generate a file named submission_linear.csv, which you can then submit to obtain the best results.
 
 ## Explanation of the code
 ### Generate Silver Labels
